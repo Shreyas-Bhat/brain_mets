@@ -9,49 +9,99 @@ from monai.transforms import Compose
 from sklearn.model_selection import train_test_split
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self,
-                 df: pd.DataFrame,
-                 data_path: str,
-                 transforms: Compose,
-                 label_colname: str = 'label',
-                 image_colname: str = 'image'):
+    def __init__(self, df: pd.DataFrame, image_list, label_list, transform=None):
         self.df = df
-        self.data_path = data_path
-        self.transforms = transforms
-        self.label_name = label_colname
-        self.image_name = image_colname
+        self.image_names = image_list
+        self.labels = label_list
+        self.transform = transform
+    #
+    def __getitem__(self, index):
+        # try:
+        cube_uint8 = np.load(self.image_names[index])
+        # cube_uint8_4_ax = np.stack((cube_uint8[:,:,0],cube_uint8[:,:,3],cube_uint8[:,:,6]),axis=2)
+        cube_uint8_4_ax = np.stack(cube_uint8[:,:,8])
+        # cube_uint8_4_sa = np.stack((cube_uint8[:,:,2],cube_uint8[:,:,5],cube_uint8[:,:,8]),axis=2)
+        # cube_uint8_4_ax = np.stack((cube_uint8[:,:,0],cube_uint8[:,:,3],cube_uint8[:,:,6]),axis=2)
+        # cube_uint8_4_ax = np.stack((cube_uint8[:,:,0],cube_uint8[:,:,2],cube_uint8[:,:,4]),axis=2)
+        # cube_uint8_4_co = np.stack((cube_uint8[:,:,1],cube_uint8[:,:,3],cube_uint8[:,:,5]),axis=2)
+        # cube_uint8_4_sa = np.stack((cube_uint8[:,:,2],cube_uint8[:,:,4],cube_uint8[:,:,6]),axis=2)
 
-    def __len__(self):
-        return len(self.df)
-
-    def __getitem__(self,
-                    index: int):
-        img_path = os.path.join(self.data_path, self.df[self.image_name].iloc[index])
-        if img_path.endswith('.npy'):
-            img = np.load(img_path).astype('float32')
-        else:
-            try:
-                img = mpimg.imread(img_path).astype('float32')
-            except:
-                from PIL import Image, ImageFile
-                print(img_path)
-                ImageFile.LOAD_TRUNCATED_IMAGES = True
-                img = np.array(Image.open(img_path)).astype('float32')               
-            
-            # Use provided bounding box if available. The bounding box coordinates should be stored in columns named
-            # y1, y2, x1, x2.
-            if 'y1' in self.df:
-                idx_data = self.df.iloc[index]
-                img = img[int(idx_data['y1']): int(idx_data['y2']), int(idx_data['x1']): int(idx_data['x2']), :]
-                # Remove center crop if the bounding box is provided
-                self.transforms = Compose([tr for tr in list(self.transforms.transforms)
-                                           if 'CenterSpatialCrop' not in str(tr)])
+#         print(cube_uint8_4_ax.shape)
+#         print(cube_uint8_4_co.shape)
+#         print(cube_uint8_4_sa.shape)
         
-        gt = self.df[self.label_name].iloc[index]
-        # Image, label, image filename
-        return self.transforms(img), \
-               torch.as_tensor(int(gt)) if not math.isnan(gt) else gt, \
-               self.df[self.image_name].iloc[index]
+        im_4_ax = Image.fromarray(np.resize(cube_uint8_4_ax, (200,200,3)),'RGB')
+        
+
+#         im_4_co = Image.fromarray(np.resize(cube_uint8_4_co, (200,200,3)),'RGB')
+        
+
+#         im_4_sa = Image.fromarray(np.resize(cube_uint8_4_sa, (200,200,3)),'RGB')
+        
+
+
+        # print(im_4_ax.size)
+        # print(im_4_co.size)
+        # print(im_4_sa.size)
+        # im_4_ax = Image.fromarray(cube_uint8_4_ax,'RGB')
+        # im_4_co = Image.fromarray(cube_uint8_4_co,'RGB')
+        # im_4_sa = Image.fromarray(cube_uint8_4_sa,'RGB')
+
+        if self.transform is not None:
+            #print("here")
+            # im_4_ax = torch.from_numpy(np.array(im_4_ax))
+            # im_4_co = torch.from_numpy(np.array(im_4_co))
+            # im_4_sa = torch.from_numpy(np.array(im_4_sa))
+            # image = torch.cat([im_4_ax, im_4_co, im_4_sa])
+            # im_4_ax = torch.unsqueeze(im_4_ax, dim=0)
+            # im_4_co = torch.unsqueeze(im_4_co, dim=0)
+            # im_4_sa = torch.unsqueeze(im_4_sa, dim=0)
+            im_4_ax_tup = self.transform(im_4_ax)
+            # im_4_co_tup = self.transform(im_4_co)
+            # im_4_sa_tup = self.transform(im_4_sa)
+#             print("im_ax", im_4_ax_tup.shape)
+#             print("im_co", im_4_co_tup.shape)
+#             print("im_sa", im_4_sa_tup.shape)
+            
+            # image = torch.cat(([im_4_ax_tup[0], im_4_co_tup[0], im_4_sa_tup[0]]), dim=0)
+#             image = torch.cat((im_4_ax_tup[0,:,:].unsqueeze_(0), im_4_co_tup[0,:,:].unsqueeze_(0), im_4_sa_tup[0,:,:].unsqueeze_(0),
+#                                im_4_ax_tup[1,:,:].unsqueeze_(0), im_4_co_tup[1,:,:].unsqueeze_(0), im_4_sa_tup[1,:,:].unsqueeze_(0),
+#                                im_4_ax_tup[2,:,:].unsqueeze_(0), im_4_co_tup[2,:,:].unsqueeze_(0), im_4_sa_tup[2,:,:].unsqueeze_(0),),0)
+                                
+            
+
+            #image = self.transform(image)
+            # print("im_4_ax", im_4_ax)
+            # print("im_4_co", im_4_co)
+            # print("im_4_sa", im_4_sa)
+            # convert PIL images to tensors
+            # im_4_ax = torch.from_numpy(np.array(im_4_ax))
+            # im_4_co = torch.from_numpy(np.array(im_4_co))
+            # im_4_sa = torch.from_numpy(np.array(im_4_sa))
+
+        # if im_4_ax is None or im_4_co is None or im_4_sa is None:
+        if im_4_ax is None:
+            #print("hello")
+            return None
+
+        #print("moshi")
+        # image = torch.cat(torch.stack((im_4_ax, im_4_co, im_4_sa)),0) # stack by orientation, replace alternative here
+        #image = torch.stack([im_4_ax, im_4_co, im_4_sa])
+        #for i in (im_4_ax, im_4_co, im_4_sa):
+        #   print(type(i))
+        # image = torch.cat(([im_4_ax_tup, im_4_co_tup, im_4_sa_tup]), dim=0)
+        image = torch.cat(([im_4_ax_tup]), dim=0)
+
+        #print("concat",image.shape)
+        label = torch.tensor(self.labels[index])
+        return image, label
+           # print("how")
+        # except:
+        #     print("hello1")
+        #     return None
+    #
+    def __len__(self):
+        return len(self.image_names)
 
 
 def loader(data_path: str,
